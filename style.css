@@ -48,6 +48,10 @@ html,body{
   font-weight:700;
   box-shadow:0 6px 12px rgba(0,0,0,0.4);
   touch-action:manipulation;
+  position:fixed;
+  top:12px;
+  right:12px;
+  z-index:60;
 }
 
 #touch-ui{
@@ -119,7 +123,7 @@ html,body{
   background:linear-gradient(180deg,#4f9aff,#2f6fd8);
 }
 
-/* Upgrade modal styles */
+/* Upgrade modal styles & animations */
 .upgrade-overlay{
   position:fixed;
   inset:0;
@@ -128,7 +132,9 @@ html,body{
   align-items:center;
   justify-content:center;
   z-index:80;
+  animation:fadeIn .18s ease-out;
 }
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
 .upgrade-panel{
   background:linear-gradient(180deg,#1e1e1f,#151515);
   border-radius:12px;
@@ -136,13 +142,21 @@ html,body{
   width:min(720px,92%);
   box-shadow:0 10px 30px rgba(0,0,0,0.6);
   color:#fff;
+  transform:scale(.96);
+  animation:popIn .18s cubic-bezier(.2,.9,.28,1) forwards;
 }
+@keyframes popIn { to { transform:scale(1) } }
 .upgrade-title{ font-size:20px; margin-bottom:10px; }
 .upgrade-grid{ display:flex; gap:12px; justify-content:space-between; }
-.upgrade-card{ flex:1; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; text-align:center; }
+.upgrade-card{ flex:1; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; text-align:center; transition:transform .12s, box-shadow .12s; }
+.upgrade-card:hover{ transform:translateY(-6px); box-shadow:0 12px 30px rgba(0,0,0,0.45); }
+.upgrade-card .icon{ font-size:34px; margin-top:6px; }
 .upgrade-card h3{ margin:8px 0; font-size:16px; }
 .upgrade-card p{ margin:6px 0 12px; font-size:13px; color:#ddd; }
-.upgrade-btn{ background:#2fb44b; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer; }
+.upgrade-btn{ background:#2fb44b; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer; touch-action:manipulation; }
+
+/* small floating confirm text style */
+.floating-text{ position:absolute; background:transparent; color:#ffd; font-weight:700; pointer-events:none; transform:translate(-50%,-50%); }
 
 /* On small widths adapt */
 @media (max-width:700px){
@@ -151,4 +165,5 @@ html,body{
   #fire,#switch{ width:72px; height:72px;}
   .upgrade-grid{ flex-direction:column; }
   #hud{ flex-direction:column; align-items:flex-start; }
+  .hud-btn{ top:8px; right:8px; }
 }
