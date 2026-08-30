@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Survival Prototype</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -12,7 +13,19 @@
     <div id="stats">Level: <span id="level">1</span> • XP: <span id="xp">0</span>/<span id="xpNext">10</span></div>
     <div id="weapons">Weapon: <span id="weapon">Pistol</span></div>
     <div id="upgrades">Upgrades: <span id="upgradesList">None</span></div>
-    <div id="controls">WASD / Arrows to move • Click to shoot • R to restart</div>
+    <div id="controls">WASD / Arrows to move • Click or tap to shoot • R to restart</div>
+  </div>
+
+  <!-- Touch controls for tablets / iPads -->
+  <div id="touch-ui">
+    <div id="joystick" class="control" aria-hidden="true">
+      <div class="base"></div>
+      <div class="thumb"></div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+      <button id="fire" class="control">FIRE</button>
+      <button id="switch" class="control">SW</button>
+    </div>
   </div>
 
   <script src="game.js"></script>
