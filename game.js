@@ -1,4 +1,5 @@
 // Simple survival prototype with keyboard/mouse + touch (joystick + fire) support
+// Added: level-up upgrade modal with 3 choices and in-game visual effects for chosen upgrades.
 (function() {
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -50,7 +51,12 @@
     xpNext: 10,
     upgradePoints: 0,
     unlockedWeapons: ['Pistol'],
-    currentWeaponIndex: 0
+    currentWeaponIndex: 0,
+    // added
+    showUpgrade: false,
+    pendingOptions: [],
+    turrets: [],
+    drones: []
   };
 
   // Weapons definitions
@@ -102,6 +108,7 @@
 
   // Pointer events
   function onPointerDown(e) {
+    if (state.showUpgrade) return; // block input while choosing upgrade
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX, y = e.clientY;
     // If touching controls, store role
@@ -178,7 +185,7 @@
 
   // Fire button
   if (fireBtn) {
-    fireBtn.addEventListener('pointerdown', e => { state.shooting = true; e.preventDefault(); }, { passive:false });
+    fireBtn.addEventListener('pointerdown', e => { if (!state.showUpgrade) state.shooting = true; e.preventDefault(); }, { passive:false });
     fireBtn.addEventListener('pointerup', e => { state.shooting = false; e.preventDefault(); }, { passive:false });
   }
   if (switchBtn) {
@@ -211,6 +218,69 @@
     state.bullets.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: 4, damage, life: 2 });
   }
 
+  // Upgrades system
+  const upgradePool = [
+    { id: 'health', name: 'Health Boost', desc: 'Increase max HP by 25 and heal to full', apply(state) {
+      player.maxHp += 25; player.hp = player.maxHp;
+      // visual particle burst
+      for (let i=0;i<10;i++) state.particles.push({ x: player.x, y: player.y, vx: rand(-120,120), vy: rand(-120,120), life: 0.9 });
+    }},
+    { id: 'turret', name: 'Deploy Turret', desc: 'Spawn a friendly turret that auto-shoots nearby enemies', apply(state) {
+      const t = { x: player.x + 40, y: player.y - 24, cooldown:0, fireRate: 700, damage: 8, bulletSpeed: 360, life: Infinity };
+      state.turrets.push(t);
+    }},
+    { id: 'drone', name: 'Attack Drone', desc: 'A small drone orbits you and damages nearby enemies', apply(state) {
+      const d = { angle: 0, dist: 42, speed: 3.0, damage: 12, cooldown: 0.2 };
+      state.drones.push(d);
+    }},
+    { id: 'damage', name: 'Weapon Tune', desc: 'Increase current weapon damage by 3', apply(state) {
+      const unlocked = weapons.filter(w => state.unlockedWeapons.includes(w.name));
+      const weapon = unlocked[state.currentWeaponIndex] || weapons[0];
+      weapon.damage += 3;
+      // small particles
+      for (let i=0;i<6;i++) state.particles.push({ x: player.x, y: player.y, vx: rand(-80,80), vy: rand(-80,80), life:0.6 });
+    }}
+  ];
+
+  function generateUpgradeOptions() {
+    const opts = [];
+    const copy = upgradePool.slice();
+    while (opts.length < 3 && copy.length) {
+      const idx = Math.floor(rand(0, copy.length));
+      opts.push(copy.splice(idx,1)[0]);
+    }
+    return opts;
+  }
+
+  function showUpgradeChoices() {
+    state.showUpgrade = true;
+    state.pendingOptions = generateUpgradeOptions();
+    // build modal DOM
+    const overlay = document.createElement('div'); overlay.className = 'upgrade-overlay'; overlay.id = 'upgradeOverlay';
+    const panel = document.createElement('div'); panel.className = 'upgrade-panel';
+    panel.innerHTML = `<div class="upgrade-title">Level Up! Choose one upgrade</div>`;
+    const grid = document.createElement('div'); grid.className = 'upgrade-grid';
+    state.pendingOptions.forEach(opt => {
+      const card = document.createElement('div'); card.className = 'upgrade-card';
+      const h = document.createElement('h3'); h.textContent = opt.name; const p = document.createElement('p'); p.textContent = opt.desc;
+      const btn = document.createElement('button'); btn.className = 'upgrade-btn'; btn.textContent = 'Choose';
+      btn.addEventListener('click', () => { applyUpgrade(opt); document.body.removeChild(overlay); });
+      card.appendChild(h); card.appendChild(p); card.appendChild(btn); grid.appendChild(card);
+    });
+    panel.appendChild(grid); overlay.appendChild(panel); document.body.appendChild(overlay);
+  }
+
+  function applyUpgrade(opt) {
+    opt.apply(state);
+    state.showUpgrade = false;
+    state.pendingOptions = [];
+    state.upgradePoints = Math.max(0, state.upgradePoints - 1);
+    elUpgrades.textContent = state.upgradePoints > 0 ? `${state.upgradePoints} available` : 'None';
+    // show a small floating text to confirm
+    const txt = { x: player.x, y: player.y - 30, life: 1.4, text: opt.name };
+    state.particles.push({ x: txt.x, y: txt.y, vx: 0, vy: -20, life: 0.9 });
+  }
+
   function giveXP(amount) {
     state.xp += amount;
     elXP.textContent = state.xp;
@@ -222,14 +292,12 @@
       elLevel.textContent = state.level;
       elXPNext.textContent = state.xpNext;
       elUpgrades.textContent = state.upgradePoints > 0 ? `${state.upgradePoints} available` : 'None';
-      // auto-unlock a weapon at certain levels
-      if (state.level === 3 && !state.unlockedWeapons.includes('Shotgun')) state.unlockedWeapons.push('Shotgun');
-      if (state.level === 6 && !state.unlockedWeapons.includes('Rifle')) state.unlockedWeapons.push('Rifle');
+      // pause and show upgrade choices
+      showUpgradeChoices();
     }
   }
 
   function cycleWeapon() {
-    // go through only unlocked weapons
     const unlocked = weapons.filter(w => state.unlockedWeapons.includes(w.name));
     state.currentWeaponIndex = (state.currentWeaponIndex + 1) % unlocked.length;
     elWeapon.textContent = unlocked[state.currentWeaponIndex].name;
@@ -246,6 +314,8 @@
     state.upgradePoints = 0;
     state.unlockedWeapons = ['Pistol'];
     state.currentWeaponIndex = 0;
+    state.turrets.length = 0; state.drones.length = 0;
+    state.showUpgrade = false; state.pendingOptions = [];
     elLevel.textContent = state.level;
     elXP.textContent = state.xp;
     elXPNext.textContent = state.xpNext;
@@ -255,6 +325,8 @@
 
   // Main update/draw loop
   function update(dt) {
+    if (state.showUpgrade) return; // pause game updates while choosing upgrades
+
     // Input keyboard movement
     let mx = 0, my = 0;
     if (state.keys['w'] || state.keys['arrowup']) my -= 1;
@@ -284,6 +356,49 @@
     if (state.spawnTimer > Math.max(0.6, 1.6 - state.level * 0.06)) {
       spawnEnemy();
       state.spawnTimer = 0;
+    }
+
+    // Update turrets: target nearest enemy and shoot
+    for (const t of state.turrets) {
+      t.cooldown -= dt*1000;
+      // follow the player slowly
+      const tx = player.x + (t.x - player.x) * 0.95;
+      const ty = player.y + (t.y - player.y) * 0.95;
+      t.x = tx; t.y = ty;
+      if (t.cooldown <= 0) {
+        // find nearest enemy in range
+        let target = null; let bestD = 99999;
+        for (const e of state.enemies) {
+          const d = Math.hypot(e.x - t.x, e.y - t.y);
+          if (d < 360 && d < bestD) { bestD = d; target = e; }
+        }
+        if (target) {
+          const angle = Math.atan2(target.y - t.y, target.x - t.x);
+          spawnBullet(t.x, t.y, angle, t.bulletSpeed, t.damage);
+          t.cooldown = t.fireRate;
+        }
+      }
+    }
+
+    // Update drones: orbit player and damage enemies on proximity
+    for (const d of state.drones) {
+      d.angle += dt * d.speed;
+      const dx = player.x + Math.cos(d.angle) * d.dist;
+      const dy = player.y + Math.sin(d.angle) * d.dist;
+      d.x = dx; d.y = dy;
+      d.cooldown -= dt;
+      if (d.cooldown <= 0) {
+        // deal damage to enemies within radius
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+          const e = state.enemies[i];
+          if (Math.hypot(e.x - d.x, e.y - d.y) < 24) {
+            e.hp -= d.damage;
+            d.cooldown = 0.2;
+            if (e.hp <= 0) { giveXP(3); state.enemies.splice(i,1); }
+            break;
+          }
+        }
+      }
     }
 
     // Update enemies
@@ -393,6 +508,17 @@
     ctx.fillStyle = '#2aa';
     ctx.fillRect(8, -5, 16, 10);
     ctx.restore();
+
+    // draw turrets
+    for (const t of state.turrets) {
+      ctx.fillStyle = '#7af'; ctx.beginPath(); ctx.arc(t.x, t.y, 10, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#3cf'; ctx.fillRect(t.x-6, t.y-20, 12, 8);
+    }
+
+    // draw drones
+    for (const d of state.drones) {
+      ctx.fillStyle = '#ffb86b'; ctx.beginPath(); ctx.arc(d.x, d.y, 8, 0, Math.PI*2); ctx.fill();
+    }
 
     // draw enemies
     for (const e of state.enemies) {
