@@ -8,7 +8,7 @@ html,body{
   -webkit-user-select:none;
   user-select:none;
   -webkit-touch-callout:none;
-  touch-action:none; /* important: tells browser not to handle gestures */
+  touch-action:none;
   background:#111;
   color:#eee;
   font-family:system-ui, -apple-system, "Helvetica Neue", Arial;
@@ -31,6 +31,7 @@ html,body{
   padding:8px 10px;
   border-radius:8px;
   font-size:14px;
+  pointer-events:none;
 }
 
 #touch-ui{
@@ -39,7 +40,7 @@ html,body{
   left:18px;
   right:18px;
   z-index:40;
-  pointer-events:none; /* let children override when needed */
+  pointer-events:none;
   display:flex;
   justify-content:space-between;
   align-items:flex-end;
@@ -72,7 +73,7 @@ html,body{
   height:48px;
   background:rgba(255,255,255,0.14);
   border-radius:50%;
-  transform:translate(-0%, -0%);
+  transform:translate(-50%, -50%);
   transition:background .08s;
   pointer-events:none;
 }
