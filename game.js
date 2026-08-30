@@ -10,6 +10,7 @@
   const elXPNext = document.getElementById('xpNext');
   const elWeapon = document.getElementById('weapon');
   const elUpgrades = document.getElementById('upgradesList');
+  const upgradeBtn = document.getElementById('upgradeBtn');
 
   // Touch UI elements
   const joystickEl = document.getElementById('joystick');
@@ -84,7 +85,7 @@
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
   // Input: keyboard
-  window.addEventListener('keydown', e => { state.keys[e.key.toLowerCase()] = true; if (e.key === 'r' || e.key === 'R') restart(); });
+  window.addEventListener('keydown', e => { state.keys[e.key.toLowerCase()] = true; if (e.key === 'r' || e.key === 'R') restart(); if ((e.key === 'u' || e.key === 'U') && state.upgradePoints > 0 && !state.showUpgrade) showUpgradeChoices(); });
   window.addEventListener('keyup', e => { state.keys[e.key.toLowerCase()] = false; });
 
   // Mouse aim & shoot
@@ -114,6 +115,10 @@
     // If touching controls, store role
     if (e.target === fireBtn) { state.pointers[e.pointerId] = { role: 'fire', startX: x, startY: y }; return; }
     if (e.target === switchBtn) { state.pointers[e.pointerId] = { role: 'switch' }; return; }
+    if (e.target === upgradeBtn) { // open upgrade UI if available
+      if (state.upgradePoints > 0 && !state.showUpgrade) showUpgradeChoices();
+      return;
+    }
     // left half -> joystick, right half -> aim/shoot
     const role = (x < rect.left + rect.width * 0.5) ? 'joystick' : 'aim';
     state.pointers[e.pointerId] = { role, startX: x, startY: y, x, y };
@@ -487,6 +492,9 @@
     elLevel.textContent = state.level;
     elXPNext.textContent = state.xpNext;
     elWeapon.textContent = (weapons.find(w => w.name === (weapons[state.currentWeaponIndex] && weapons[state.currentWeaponIndex].name)) || weapons[state.currentWeaponIndex] || weapons[0]).name;
+
+    // show/hide upgrade button
+    if (upgradeBtn) upgradeBtn.style.display = (state.upgradePoints > 0 && !state.showUpgrade) ? 'inline-block' : 'none';
   }
 
   function draw() {
@@ -563,6 +571,9 @@
   elXP.textContent = state.xp;
   elXPNext.textContent = state.xpNext;
   elWeapon.textContent = weapons[0].name;
+
+  // attach upgrade button listener
+  if (upgradeBtn) upgradeBtn.addEventListener('click', () => { if (!state.showUpgrade && state.upgradePoints > 0) showUpgradeChoices(); });
 
   // Small util: enter fullscreen
   window.gameHelpers = {
