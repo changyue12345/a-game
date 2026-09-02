@@ -1443,7 +1443,7 @@ function drawWaveCountdown() {
   ctx.fillText('Next wave incoming…', cx, H/2 + 50);
 }
 
-
+function drawMenu() {
   ctx.fillStyle='#080810'; ctx.fillRect(0,0,W,H);
   for (let i=0; i<90; i++) {
     const r=0.5+Math.sin(Date.now()/600+i)*0.5;
