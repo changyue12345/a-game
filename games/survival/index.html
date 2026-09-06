@@ -31,6 +31,8 @@ const WEAPONS = {
   sniper:    {name:'Sniper Rifle',    dmg:130, rate:1800, spd:24, spread:0.01, count:1, col:'#27ae60', price:160, desc:'Massive single-hit dmg',  minLv:3},
   launcher:  {name:'Rocket Launcher', dmg:190, rate:2300, spd:5,  spread:0.02, count:1, col:'#e74c3c', price:220, desc:'AoE explosion radius',    minLv:3, rocket:true},
   plasma:    {name:'Plasma Gun',      dmg:40,  rate:280,  spd:15, spread:0.03, count:1, col:'#00ffee', price:280, desc:'Energy shots, fast',      minLv:4},
+  boomerang: {name:'Boomerang',       dmg:50,  rate:1800, spd:8,  spread:0,    count:1, col:'#f0c040', price:100, desc:'Flies out and returns, hits all', minLv:2, boomerang:true},
+  spray:     {name:'Spray',           dmg:0.25,rate:1,    spd:10, spread:0.45, count:1, col:'#44ccff', price:70,  desc:'Continuous spray, 0.25 dmg/bullet', minLv:1},
   fist:   {name:'Fist',   dmg:15,  rate:360,  range:44, arc:1.9,  col:'#f5cba7', price:0,   desc:'Quick bare-knuckle strike', minLv:1, mweapon:true},
   spear:  {name:'Spear',  dmg:48,  rate:680,  range:92, arc:0.45, col:'#c8a05a', price:50,  desc:'Long reach, narrow thrust',  minLv:2, mweapon:true},
   sword:  {name:'Sword',  dmg:70,  rate:520,  range:70, arc:1.35, col:'#c8c8cc', price:110, desc:'Wide arc, reliable damage',   minLv:2, mweapon:true},
@@ -167,6 +169,8 @@ function snd(id) {
                        setTimeout(()=>tn(880,1760,0.18,0.11,'sine'),240); break;
     case 'boss_die':    ns(0.5,0.28,150); tn(120,20,0.45,0.18,'sawtooth'); break;
     case 'spear_throw': ns(0.14,0.13,2200); tn(380,160,0.16,0.09,'sawtooth'); break;
+    case 'boomerang':   tn(600,300,0.12,0.10,'sawtooth'); ns(0.08,0.06,2400); break;
+    case 'spray':       ns(0.04,0.04,3000); break;
     case 'turret':     tn(500,300,0.04,0.07,'square'); ns(0.03,0.04,1800); break;
     case 'ghost_warn': tn(220,110,0.6,0.14,'sine'); setTimeout(()=>tn(180,90,0.7,0.10,'sine'),400);
                        setTimeout(()=>ns(0.9,0.05,300),200); break;
@@ -703,11 +707,26 @@ function tryShoot() {
   const now = Date.now();
   const cd  = w.rate * p.rateMult;
   if (now - (p.lastShot[wId]||0) < cd) return;
+  // Block boomerang while one is already in flight
+  if (w.boomerang && bullets.some(b => b.isBoomerang)) return;
   p.lastShot[wId] = now;
   snd(wId);
 
   const wx = camera.x + mouse.x, wy = camera.y + mouse.y;
   const base = Math.atan2(wy - p.y, wx - p.x);
+
+  if (w.boomerang) {
+    bullets.push({
+      x:p.x, y:p.y,
+      vx:Math.cos(base)*w.spd, vy:Math.sin(base)*w.spd,
+      dmg:w.dmg*p.dmgMult, col:w.col,
+      life:6, fromPlayer:true,
+      isBoomerang:true, returnPhase:false, outTimer:1.1,
+      spin:0, pierce:true, hitSet:new Set(),
+    });
+    spawnPfx(p.x, p.y, w.col, 8, 3);
+    return;
+  }
 
   for (let i=0; i<w.count; i++) {
     const a = base + (Math.random()-0.5)*w.spread*2;
@@ -811,9 +830,37 @@ function updateBullets(dt) {
 
     if (bulletHitsObstacle(b)) {
       if (b.rocket) explode(b.x, b.y, b.dmg);
-      else spawnPfx(b.x, b.y, '#aaa', 4, 2);
-      b.life = -1; return;
+      else if (!b.isBoomerang) { spawnPfx(b.x, b.y, '#aaa', 4, 2); b.life = -1; return; }
     }
+
+    // Boomerang flight logic
+    if (b.isBoomerang) {
+      b.spin += dt * 10;
+      if (!b.returnPhase) {
+        b.outTimer -= dt;
+        if (b.outTimer <= 0) {
+          b.returnPhase = true;
+          b.hitSet = new Set(); // reset so enemies can be hit again on return
+        }
+      } else {
+        // Steer back toward player
+        const tx = player.x - b.x, ty = player.y - b.y;
+        const td = Math.hypot(tx, ty) || 1;
+        const spd = Math.hypot(b.vx, b.vy) || 8;
+        b.vx += (tx/td * spd - b.vx) * dt * 5;
+        b.vy += (ty/td * spd - b.vy) * dt * 5;
+        const ns = Math.hypot(b.vx, b.vy) || 1;
+        b.vx = b.vx/ns * spd;
+        b.vy = b.vy/ns * spd;
+        // Caught by player
+        if (Math.hypot(player.x-b.x, player.y-b.y) < 24) {
+          spawnPfx(b.x, b.y, '#f0c040', 10, 4);
+          b.life = -1; return;
+        }
+      }
+    }
+
+    if (!b.isBoomerang && !b.life) return;
 
     if (b.fromPlayer) {
       if (b.pierce) {
@@ -1076,7 +1123,19 @@ function drawWorld() {
   // Bullets
   bullets.forEach(b => {
     ctx.fillStyle = b.col;
-    if (b.rocket) {
+    if (b.isBoomerang) {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.spin);
+      ctx.shadowColor = b.col; ctx.shadowBlur = 14;
+      ctx.strokeStyle = b.col; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-18, -4); ctx.quadraticCurveTo(0, -14, 18, -4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-18,  4); ctx.quadraticCurveTo(0,  14, 18,  4); ctx.stroke();
+      ctx.strokeStyle = '#fff8c0'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-18, -4); ctx.quadraticCurveTo(0, -14, 18, -4); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    } else if (b.rocket) {
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(Math.atan2(b.vy, b.vx));
