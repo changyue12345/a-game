@@ -1,6 +1,10 @@
 **What's New**
 
--Touchscreen
+-New weapons:
+
+Spray: shoots bullets quickly
+
+Boomerang: Shoots and comes back, hitting enemies twice
 
 -Bug fixes
 
