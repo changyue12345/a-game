@@ -2,11 +2,7 @@
 
 -New weapons:
 
-Spray: shoots bullets quickly
-
-Boomerang: Shoots and comes back, hitting enemies twice
-
--Bug fixes
+lol gun
 
 # Games
 
