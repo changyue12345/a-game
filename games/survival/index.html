@@ -33,7 +33,7 @@ const WEAPONS = {
   plasma:    {name:'Plasma Gun',      dmg:40,  rate:200,  spd:15, spread:0.03, count:1, col:'#00ffee', price:280, desc:'Energy shots, fast',      minLv:4},
   boomerang: {name:'Boomerang',       dmg:50,  rate:1800, spd:8,  spread:0,    count:1, col:'#f0c040', price:100, desc:'Flies out and returns, hits all', minLv:2, boomerang:true},
   spray:     {name:'Spray',           dmg:1,rate:1,    spd:10, spread:0.45, count:1, col:'#44ccff', price:50,  desc:'Continuous spray, 1 dmg/bullet', minLv:1},
-  lol:       {name: 'lol',            dmg:1,rate:0.01, spd:10, spread:0.01, count:1, col:'#bbb', price:300, desc:'lol', minLv:4},
+  lol:       {name: 'lol',            dmg:1,rate:0.01, spd:10, spread:0.01, count:1, col:'#bbb', price:200, desc:'lol', minLv:4},
   fist:   {name:'Fist',   dmg:15,  rate:360,  range:44, arc:1.9,  col:'#f5cba7', price:0,   desc:'Quick bare-knuckle strike', minLv:1, mweapon:true},
   spear:  {name:'Spear',  dmg:48,  rate:680,  range:92, arc:0.45, col:'#c8a05a', price:50,  desc:'Long reach, narrow thrust',  minLv:2, mweapon:true},
   sword:  {name:'Sword',  dmg:70,  rate:520,  range:70, arc:1.35, col:'#c8c8cc', price:110, desc:'Wide arc, reliable damage',   minLv:2, mweapon:true},
@@ -361,7 +361,7 @@ function startGame() {
   player = {
     x: WORLD/2, y: WORLD/2,
     hp: 100, maxHp: 100, spd: 3,
-    em: 1000,
+    em: 0,
     spearCd: 0,
     weapons: ['pistol', 'fist'], wIdx: 0, lastShot: {},
     dmgMult: 1, rateMult: 1,
